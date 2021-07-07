@@ -2,18 +2,30 @@ package selector;
 
 import com.github.oxo42.stateless4j.StateMachine;
 import com.github.oxo42.stateless4j.StateMachineConfig;
+import com.google.common.collect.ImmutableMap;
 import lombok.SneakyThrows;
 import org.firmata4j.IODevice;
 import org.firmata4j.firmata.FirmataDevice;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Map;
 import java.util.Timer;
 import java.util.TimerTask;
 
-import static selector.PinMap.*;
+import static selector.PinMap.HIGH;
 
 public class Main {
+
+	private static final ImmutableMap<STATE, LEDConfig> LEDMap = ImmutableMap.copyOf(Map.of(
+			STATE.STARTED, new LEDConfig(LED_TYPE.PERMANENT, LED_TYPE.PERMANENT),
+			STATE.BUSY_STARTING_VM_1, new LEDConfig(LED_TYPE.PERMANENT, LED_TYPE.BLINKING),
+			STATE.BUSY_STARTING_VM_2, new LEDConfig(LED_TYPE.BLINKING, LED_TYPE.PERMANENT),
+			STATE.VM1_STARTED, new LEDConfig(LED_TYPE.PERMANENT, LED_TYPE.OFF),
+			STATE.VM2_STARTED, new LEDConfig(LED_TYPE.OFF, LED_TYPE.PERMANENT),
+			STATE.CONFIRM_SWITCH_TO_VM_1, new LEDConfig(LED_TYPE.BLINKING, LED_TYPE.PERMANENT),
+			STATE.CONFIRM_SWITCH_TO_VM_2, new LEDConfig(LED_TYPE.PERMANENT, LED_TYPE.BLINKING)
+	));
 
 	private static final String[] vmNames = new String[2];
 	private static Timer vm1Timer;
@@ -65,25 +77,25 @@ public class Main {
 		config.configure(STATE.CONFIRM_SWITCH_TO_VM_2).ignore(TRIGGER.DONE_STARTING_VM_1);
 		config.configure(STATE.CONFIRM_SWITCH_TO_VM_2).ignore(TRIGGER.DONE_STARTING_VM_2);
 
+		config.configure(STATE.STARTED).onEntry(() -> {
+			System.out.println("Blinking");
+			LEDManager.apply(LEDMap.get(STATE.STARTED));
+		});
+
 		config.configure(STATE.BUSY_STARTING_VM_1).onEntry(() -> {
+			LEDManager.apply(LEDMap.get(STATE.BUSY_STARTING_VM_1));
 			VMInterface.stopVM(vmNames[1]);
 			VMInterface.startVM(vmNames[0]);
-			BlinkManager.stopBlinkLeft();
-			BlinkManager.stopBlinkRight();
-			BlinkManager.stopLeftPermanent();
-			BlinkManager.stopRightPermanent();
 			ref.machine.fire(TRIGGER.DONE_STARTING_VM_1);
 		});
 		config.configure(STATE.BUSY_STARTING_VM_2).onEntry(() -> {
+			LEDManager.apply(LEDMap.get(STATE.BUSY_STARTING_VM_2));
 			VMInterface.stopVM(vmNames[0]);
 			VMInterface.startVM(vmNames[1]);
-			BlinkManager.stopBlinkLeft();
-			BlinkManager.stopBlinkRight();
-			BlinkManager.stopLeftPermanent();
-			BlinkManager.stopRightPermanent();
 			ref.machine.fire(TRIGGER.DONE_STARTING_VM_2);
 		});
 		config.configure(STATE.CONFIRM_SWITCH_TO_VM_1).onEntry(() -> {
+			LEDManager.apply(LEDMap.get(STATE.CONFIRM_SWITCH_TO_VM_1));
 			vm1Timer = new Timer("WaitSwitchVM1", true);
 			vm1Timer.schedule(new TimerTask() {
 				@Override
@@ -92,10 +104,9 @@ public class Main {
 					vm1Timer = null;
 				}
 			}, 5000L);
-			BlinkManager.stopBlinkRight();
-			BlinkManager.startBlinkLeft();
 		});
 		config.configure(STATE.CONFIRM_SWITCH_TO_VM_2).onEntry(() -> {
+			LEDManager.apply(LEDMap.get(STATE.CONFIRM_SWITCH_TO_VM_2));
 			vm2Timer = new Timer("WaitSwitchVM2", true);
 			vm2Timer.schedule(new TimerTask() {
 				@Override
@@ -104,33 +115,28 @@ public class Main {
 					vm2Timer = null;
 				}
 			}, 5000L);
-			BlinkManager.stopBlinkLeft();
-			BlinkManager.startBlinkRight();
 		});
 		config.configure(STATE.VM1_STARTED).onEntry(() -> {
+			LEDManager.apply(LEDMap.get(STATE.VM1_STARTED));
 			if (vm1Timer != null) {
 				vm1Timer.cancel();
 				vm1Timer.purge();
 				vm1Timer = null;
 			}
-			BlinkManager.stopRightPermanent();
-			BlinkManager.startLeftPermanent();
 		});
 		config.configure(STATE.VM2_STARTED).onEntry(() -> {
+			LEDManager.apply(LEDMap.get(STATE.VM2_STARTED));
 			if (vm2Timer != null) {
 				vm2Timer.cancel();
 				vm2Timer.purge();
 				vm2Timer = null;
 			}
-			BlinkManager.stopLeftPermanent();
-			BlinkManager.startRightPermanent();
 		});
-		ref.machine = new StateMachine<>(STATE.STARTED, config);
 		final IODevice device = new FirmataDevice("/dev/ttyACM0");
 		device.start();
 		device.ensureInitializationIsDone();
 		PinMap.initializePins(device);
-		BlinkManager.initialize();
+		LEDManager.initialize();
 		Runtime.getRuntime().addShutdownHook(new Thread(() -> {
 			try {
 				device.stop();
@@ -140,17 +146,16 @@ public class Main {
 		}));
 		PinMap.PIN_BUTTON_LEFT.addEventListener((PinChangeListener) newValue -> {
 			if (newValue == HIGH) return;
-			System.out.println("Left pressed");
 			ref.machine.fire(TRIGGER.LEFT_BUTTON_PRESSED);
 		});
 
 		PinMap.PIN_BUTTON_RIGHT.addEventListener((PinChangeListener) newValue -> {
 			if (newValue == HIGH) return;
-			System.out.println("Right pressed");
 			ref.machine.fire(TRIGGER.RIGHT_BUTTON_PRESSED);
 		});
+		ref.machine = new StateMachine<>(STATE.STARTED, config);
+		ref.machine.fireInitialTransition();
 	}
-
 
 	private enum STATE {
 		STARTED,

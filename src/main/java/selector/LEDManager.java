@@ -9,7 +9,7 @@ import java.io.IOException;
 import static selector.PinMap.*;
 
 @UtilityClass
-public class BlinkManager {
+public class LEDManager {
 
 	private static volatile boolean isBlinkingLeft = false;
 	private static volatile boolean isBlinkingRight = false;
@@ -40,52 +40,81 @@ public class BlinkManager {
 			}
 		}).start();
 		Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-			BlinkManager.stopLeftPermanent();
-			BlinkManager.stopRightPermanent();
+			LEDManager.stopLeftPermanent();
+			LEDManager.stopRightPermanent();
 		}));
 	}
 
-	public void startBlinkLeft() {
+	public void apply(LEDConfig config) {
+		switch (config.left()) {
+			case PERMANENT -> {
+				stopLeftBlinking();
+				startLeftPermanent();
+			}
+			case BLINKING -> {
+				stopLeftPermanent();
+				startLeftBlinking();
+			}
+			case OFF -> {
+				stopLeftBlinking();
+				stopLeftPermanent();
+			}
+		}
+		switch (config.right()) {
+			case PERMANENT -> {
+				stopRightBlinking();
+				startRightPermanent();
+			}
+			case BLINKING -> {
+				stopRightPermanent();
+				startRightBlinking();
+			}
+			case OFF -> {
+				stopRightBlinking();
+				stopRightPermanent();
+			}
+		}
+	}
+
+	private void startLeftBlinking() {
 		isBlinkingLeft = true;
 	}
 
-	public void startBlinkRight() {
+	private void startRightBlinking() {
 		isBlinkingRight = true;
 	}
 
 	@SneakyThrows
-	public void stopBlinkLeft() {
+	private void stopLeftBlinking() {
 		isBlinkingLeft = false;
 		PIN_LED_LEFT.setValue(LOW);
 	}
 
 	@SneakyThrows
-	public void stopBlinkRight() {
+	private void stopRightBlinking() {
 		isBlinkingRight = false;
 		PIN_LED_RIGHT.setValue(LOW);
 	}
 
 	@SneakyThrows
-	public void startLeftPermanent() {
+	private void startLeftPermanent() {
 		isBlinkingLeft = false;
 		PinMap.PIN_LED_LEFT.setValue(HIGH);
 	}
 
 	@SneakyThrows
-	public void startRightPermanent() {
+	private void startRightPermanent() {
 		isBlinkingRight = false;
 		PinMap.PIN_LED_RIGHT.setValue(HIGH);
 	}
 
 	@SneakyThrows
-	public void stopLeftPermanent() {
-		isBlinkingLeft = false;
+	private void stopLeftPermanent() {
 		PinMap.PIN_LED_LEFT.setValue(LOW);
 	}
 
 	@SneakyThrows
-	public void stopRightPermanent() {
-		isBlinkingRight = false;
+	private void stopRightPermanent() {
 		PinMap.PIN_LED_RIGHT.setValue(LOW);
 	}
 }
