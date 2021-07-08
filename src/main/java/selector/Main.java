@@ -35,6 +35,7 @@ public class Main {
 	public static void main(String[] args) {
 		if (args.length != 2) throw new IllegalArgumentException("Illegal arg length: " + args.length);
 		System.arraycopy(args, 0, vmNames, 0, 2);
+		VMInterface.checkVirsh();
 		VMInterface.validateVMNames(vmNames);
 		System.out.println("Registered VMs: " + Arrays.toString(vmNames));
 		var ref = new Object() {
@@ -78,7 +79,6 @@ public class Main {
 		config.configure(STATE.CONFIRM_SWITCH_TO_VM_2).ignore(TRIGGER.DONE_STARTING_VM_2);
 
 		config.configure(STATE.STARTED).onEntry(() -> {
-			System.out.println("Blinking");
 			LEDManager.apply(LEDMap.get(STATE.STARTED));
 		});
 

@@ -2,7 +2,6 @@ package selector;
 
 import lombok.SneakyThrows;
 import lombok.experimental.UtilityClass;
-import lombok.val;
 import org.apache.commons.io.IOUtils;
 
 import java.nio.charset.Charset;
@@ -59,7 +58,7 @@ public class VMInterface {
 
 	@SneakyThrows
 	public void validateVMNames(String[] names) {
-		val process = Runtime.getRuntime().exec("sudo virsh -q list --all");
+		final Process process = Runtime.getRuntime().exec("sudo virsh -q list --all");
 		process.waitFor();
 		final List<String> vms =
 				Arrays.stream(IOUtils.toString(process.getInputStream(), Charset.defaultCharset()).split("\n"))
@@ -69,4 +68,11 @@ public class VMInterface {
 		if (!Arrays.stream(names).allMatch(vms::contains)) throw new IllegalArgumentException("Invalid vm name(s)");
 	}
 
+	@SneakyThrows
+	public static void checkVirsh() {
+		final Process process = Runtime.getRuntime().exec("virsh --version");
+		process.waitFor();
+		if (process.exitValue() != 0) throw new NullPointerException("Unable to locate virsh binary");
+		System.out.println("Picked up virsh v. " + IOUtils.toString(process.getInputStream(), Charset.defaultCharset()));
+	}
 }
