@@ -14,6 +14,10 @@ public class VMInterface {
 
 	@SneakyThrows
 	public int stopVM(String name) {
+		if (isShutdown(name)) {
+			System.out.println("VM " + name + " already shutdown");
+			return 0;
+		}
 		System.out.println("Stopping VM " + name);
 		System.out.println("Attempting graceful shutdown");
 		final Process shutdownProcess = Runtime.getRuntime().exec("sudo virsh shutdown " + name + " --mode acpi");
