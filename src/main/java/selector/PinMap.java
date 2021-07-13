@@ -6,30 +6,27 @@ import org.firmata4j.IODevice;
 import org.firmata4j.Pin;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.List;
+import java.util.function.Consumer;
+
 @UtilityClass
 public class PinMap {
 
-	public static final int PIN_LED_LEFT_NR = 4;
-	public static final int PIN_LED_RIGHT_NR = 5;
-	public static final int PIN_BUTTON_LEFT_NR = 3;
-	public static final int PIN_BUTTON_RIGHT_NR = 2;
-	static final Long HIGH = 1L;
-	static final Long LOW = 0L;
-
-	public static Pin PIN_LED_LEFT;
-	public static Pin PIN_LED_RIGHT;
-	public static Pin PIN_BUTTON_LEFT;
-	public static Pin PIN_BUTTON_RIGHT;
+	public static final long LOW = 0;
+	public static final long HIGH = 1;
 
 	@SneakyThrows
-	public void initializePins(@NotNull IODevice device) {
-		PIN_LED_LEFT = device.getPin(PIN_LED_LEFT_NR);
-		PIN_LED_RIGHT = device.getPin(PIN_LED_RIGHT_NR);
-		PIN_BUTTON_LEFT = device.getPin(PIN_BUTTON_LEFT_NR);
-		PIN_BUTTON_RIGHT = device.getPin(PIN_BUTTON_RIGHT_NR);
-		PIN_LED_LEFT.setMode(Pin.Mode.OUTPUT);
-		PIN_LED_RIGHT.setMode(Pin.Mode.OUTPUT);
-		PIN_BUTTON_LEFT.setMode(Pin.Mode.PULLUP);
-		PIN_BUTTON_RIGHT.setMode(Pin.Mode.PULLUP);
+	public void initializePins(@NotNull final IODevice device, @NotNull final List<SwitchEntry> switchEntries) {
+		switchEntries.forEach(new Consumer<SwitchEntry>() {
+			@SneakyThrows
+			@Override
+			public void accept(SwitchEntry switchEntry) {
+				switchEntry.setLedPin(device.getPin(switchEntry.getLed()));
+				switchEntry.setButtonPin(device.getPin(switchEntry.getButton()));
+				switchEntry.getLedPin().setMode(Pin.Mode.OUTPUT);
+				switchEntry.getLedPin().setValue(LOW);
+				switchEntry.getButtonPin().setMode(Pin.Mode.PULLUP);
+			}
+		});
 	}
 }
