@@ -1,0 +1,25 @@
+{
+  "interfaceName": "proxmox",
+  "switches": [
+    {
+      "vmName": "ManjaroKDE",
+      "buttonPin": 2,
+      "ledPin": 6
+    },
+    {
+      "vmName": "WIndows10",
+      "buttonPin": 3,
+      "ledPin": 7
+    },
+    {
+      "vmName": "-",
+      "buttonPin": 4,
+      "ledPin": 8
+    },
+    {
+      "vmName": "-",
+      "buttonPin": 5,
+      "ledPin": 9
+    }
+  ]
+}
